@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import CoreData
 
 struct ScanView: View {
     @StateObject private var viewModel = ScannerViewModel()
@@ -10,6 +11,13 @@ struct ScanView: View {
     @State private var selectedImage: PlatformImage?
     @State private var showFileImporter = false
     @State private var showPermissionAlert = false
+    @State private var todaysMeals: [MealEntry] = []
+
+    var currentDateString: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE, MMMM d"
+        return formatter.string(from: Date())
+    }
 
     var body: some View {
         NavigationStack {
@@ -25,10 +33,11 @@ struct ScanView: View {
                     errorView(msg: msg)
                 }
             }
-            .navigationTitle("NutriThali")
+            .navigationTitle("Today")
             .navigationBarTitleDisplayMode(.large)
             .onAppear {
                 viewModel.setPersistenceContext(viewContext)
+                fetchTodaysMeals()
             }
             .onChange(of: selectedImage) { oldValue, newValue in
                 if let image = newValue {
@@ -87,27 +96,16 @@ struct ScanView: View {
     
     var idleView: some View {
         ScrollView {
-            VStack(spacing: 32) {
-                // Hero Section
-                VStack(spacing: 16) {
-                    Image(systemName: "fork.knife.circle.fill")
-                        .font(.system(size: 80))
-                        .foregroundStyle(.green.gradient)
-                        .accessibilityHidden(true)
-
-                    VStack(spacing: 8) {
-                        Text("AI Food Analysis")
-                            .font(.title)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.primary)
-
-                        Text("Get instant nutrition insights for any meal")
-                            .font(.body)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                    }
+            VStack(spacing: 24) {
+                // Current Date
+                VStack(spacing: 4) {
+                    Text(currentDateString)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
-                .padding(.top, 32)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
 
                 // Onboarding/Help Section (only if API key not set)
                 if apiKey.isEmpty {
@@ -135,33 +133,22 @@ struct ScanView: View {
                     .padding(.horizontal, 16)
                 }
 
-                // Action Buttons
-                VStack(spacing: 16) {
-                    #if os(iOS)
+                // Action Buttons - Side by Side
+                #if os(iOS)
+                HStack(spacing: 12) {
                     Button {
                         showCamera = true
                     } label: {
-                        HStack(spacing: 12) {
+                        VStack(spacing: 8) {
                             Image(systemName: "camera.fill")
-                                .font(.title3)
+                                .font(.title2)
 
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Take Photo")
-                                    .font(.headline)
-
-                                Text("Capture your meal with the camera")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-
-                            Spacer()
-
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
+                            Text("Take Photo")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
                         }
-                        .padding(16)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 20)
                         .background(Color.accentColor)
                         .foregroundStyle(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -173,27 +160,16 @@ struct ScanView: View {
                     Button {
                         showImagePicker = true
                     } label: {
-                        HStack(spacing: 12) {
+                        VStack(spacing: 8) {
                             Image(systemName: "photo.fill")
-                                .font(.title3)
+                                .font(.title2)
 
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Choose from Library")
-                                    .font(.headline)
-
-                                Text("Select an existing photo")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-
-                            Spacer()
-
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
+                            Text("Choose from Library")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
                         }
-                        .padding(16)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 20)
                         .background(Color(uiColor: .secondarySystemBackground))
                         .foregroundStyle(.primary)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -201,55 +177,46 @@ struct ScanView: View {
                     .accessibilityLabel("Choose photo from library")
                     .accessibilityHint("Opens photo library to select a meal image for analysis")
                     .disabled(apiKey.isEmpty)
-                    #else
-                    Button {
-                        showFileImporter = true
-                    } label: {
-                        HStack(spacing: 12) {
-                            Image(systemName: "photo.fill")
-                                .font(.title3)
+                }
+                .padding(.horizontal, 16)
+                #else
+                Button {
+                    showFileImporter = true
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "photo.fill")
+                            .font(.title3)
 
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Select Food Image")
-                                    .font(.headline)
+                        Text("Select Food Image")
+                            .font(.headline)
 
-                                Text("Choose an image to analyze")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-
-                            Spacer()
-
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                        }
-                        .padding(16)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.accentColor)
-                        .foregroundStyle(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        Spacer()
                     }
-                    .disabled(apiKey.isEmpty)
-                    #endif
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.accentColor)
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
+                .disabled(apiKey.isEmpty)
                 .padding(.horizontal, 16)
+                #endif
 
-                // Features List
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("What You'll Get")
-                        .font(.headline)
-                        .foregroundStyle(.primary)
+                // Today's Meals Section
+                if !todaysMeals.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Today's Meals")
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                            .padding(.horizontal, 16)
 
-                    FeatureRow(icon: "chart.pie.fill", title: "Nutritional Breakdown", description: "Calories, protein, carbs, and fats")
-                    FeatureRow(icon: "heart.text.square.fill", title: "Health Verdict", description: "Overall meal healthiness assessment")
-                    FeatureRow(icon: "waveform.path.ecg", title: "Diabetes Care", description: "Glycemic index and diabetic advice")
-                    FeatureRow(icon: "scalemass.fill", title: "Portion Guidance", description: "Recommended serving sizes")
+                        ForEach(todaysMeals, id: \.id) { meal in
+                            TodayMealRow(meal: meal)
+                                .padding(.horizontal, 16)
+                        }
+                    }
+                    .padding(.top, 8)
                 }
-                .padding(16)
-                .background(Color(uiColor: .secondarySystemBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .padding(.horizontal, 16)
 
                 Spacer(minLength: 32)
             }
@@ -320,36 +287,94 @@ struct ScanView: View {
             .padding()
         }
     }
+
+    private func fetchTodaysMeals() {
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: Date())
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+
+        let fetchRequest: NSFetchRequest<MealEntry> = MealEntry.fetchRequest()
+        fetchRequest.predicate = NSPredicate(
+            format: "timestamp >= %@ AND timestamp < %@",
+            startOfDay as NSDate,
+            endOfDay as NSDate
+        )
+        fetchRequest.sortDescriptors = [NSSortDescriptor(key: "timestamp", ascending: false)]
+
+        do {
+            todaysMeals = try viewContext.fetch(fetchRequest)
+        } catch {
+            print("Failed to fetch today's meals: \(error)")
+            todaysMeals = []
+        }
+    }
 }
 
 // MARK: - Helper Views
 
-struct FeatureRow: View {
-    let icon: String
-    let title: String
-    let description: String
+struct TodayMealRow: View {
+    let meal: MealEntry
+
+    var timeString: String {
+        guard let timestamp = meal.timestamp else { return "" }
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        return formatter.string(from: timestamp)
+    }
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.title2)
-                .foregroundStyle(.green)
-                .frame(width: 32)
-                .accessibilityHidden(true)
+            // Thumbnail
+            if let imageData = meal.imageData {
+                #if os(iOS)
+                if let uiImage = UIImage(data: imageData) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 60, height: 60)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+                #elseif os(macOS)
+                if let nsImage = NSImage(data: imageData) {
+                    Image(nsImage: nsImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 60, height: 60)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+                #endif
+            }
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(meal.dishName ?? "Unknown")
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundStyle(.primary)
 
-                Text(description)
+                Text(timeString)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
             Spacer()
+
+            VStack(alignment: .trailing, spacing: 2) {
+                Text("\(Int(meal.calories))")
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+
+                Text("kcal")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
         }
+        .padding(12)
+        #if os(iOS)
+        .background(Color(uiColor: .secondarySystemBackground))
+        #elseif os(macOS)
+        .background(Color(nsColor: .controlBackgroundColor))
+        #endif
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 

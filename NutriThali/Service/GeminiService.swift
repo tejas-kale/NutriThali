@@ -126,6 +126,87 @@ class GeminiService {
         
         return try JSONDecoder().decode(FoodAnalysisResult.self, from: data)
     }
+
+    func analyzeFromDescription(description: String) async throws -> FoodAnalysisResult {
+        guard let apiKey = UserDefaults.standard.string(forKey: "gemini_api_key"), !apiKey.isEmpty else {
+            throw GeminiError.noAPIKey
+        }
+
+        guard var components = URLComponents(string: baseURL) else {
+             throw GeminiError.invalidURL
+        }
+
+        let cleanKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        components.queryItems = [
+            URLQueryItem(name: "key", value: cleanKey)
+        ]
+
+        guard let url = components.url else {
+            throw GeminiError.invalidURL
+        }
+
+        let promptText = """
+        Based on this food description: "\(description)"
+
+        Provide detailed nutritional analysis:
+
+        1. PORTION ESTIMATION: Estimate the portion size based on the description (e.g., "250g", "1.5 cups", "2 medium rotis + 150g dal + 200g rice")
+
+        2. NUTRITIONAL ANALYSIS: Calculate for the described portion:
+        - Total calories
+        - Macronutrients (protein, carbs, fats in grams)
+        - Account for hidden calories (Ghee, Oil, Butter, Cream, Sugar)
+
+        3. HEALTH ASSESSMENT: Provide overall health verdict and diabetic assessment (Type 2) considering Glycemic Index and carb load.
+
+        Return JSON:
+        {
+          "estimatedPortionSize": "Estimated portion from description",
+          "dishName": "Name of dish/meal",
+          "calories": 0,
+          "macros": { "protein": 0, "carbs": 0, "fats": 0 },
+          "verdictEmoji": "✅" or "⚠️",
+          "briefExplanation": "One sentence explaining the verdict.",
+          "diabeticFriendliness": "High", "Moderate", or "Low",
+          "diabeticAdvice": "Specific advice for diabetics",
+          "portionSizeSuggestion": "Recommended portion size for health"
+        }
+        """
+
+        let requestBody: [String: Any] = [
+            "contents": [
+                [
+                    "parts": [
+                        ["text": promptText]
+                    ]
+                ]
+            ],
+            "generationConfig": [
+                "response_mime_type": "application/json"
+            ]
+        ]
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            let errorMsg = String(data: data, encoding: .utf8) ?? "Unknown Error"
+            throw GeminiError.apiError(errorMsg)
+        }
+
+        let geminiResponse = try JSONDecoder().decode(GeminiResponse.self, from: data)
+        guard let text = geminiResponse.candidates?.first?.content.parts.first?.text,
+              let data = text.data(using: .utf8) else {
+            throw GeminiError.invalidResponse
+        }
+
+        return try JSONDecoder().decode(FoodAnalysisResult.self, from: data)
+    }
 }
 
 #if canImport(AppKit)

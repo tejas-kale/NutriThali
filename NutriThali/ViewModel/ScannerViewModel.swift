@@ -95,6 +95,52 @@ class ScannerViewModel: ObservableObject {
         }
     }
 
+    func recalculateFromDescription(_ description: String) async {
+        currentTask?.cancel()
+
+        appState = .analyzing
+        isLoading = true
+        analysisProgress = "Recalculating nutrition..."
+
+        currentTask = Task {
+            do {
+                analysisProgress = "Analyzing with Gemini AI..."
+
+                let result = try await service.analyzeFromDescription(description: description)
+
+                guard !Task.isCancelled else {
+                    appState = .idle
+                    isLoading = false
+                    return
+                }
+
+                analysisProgress = "Processing results..."
+
+                // Provide haptic feedback on success
+                #if os(iOS)
+                let generator = UINotificationFeedbackGenerator()
+                generator.notificationOccurred(.success)
+                #endif
+
+                // Small delay for smooth transition
+                try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
+
+                appState = .result(result)
+                isLoading = false
+            } catch GeminiError.noAPIKey {
+                handleError("API Key Required", message: "Please add your Gemini API key in Settings to analyze food images.")
+            } catch GeminiError.invalidURL {
+                handleError("Configuration Error", message: "Invalid API configuration. Please check your API key in Settings.")
+            } catch GeminiError.invalidResponse {
+                handleError("Analysis Failed", message: "The AI couldn't analyze this description. Try providing more details.")
+            } catch GeminiError.apiError(let details) {
+                handleError("API Error", message: "Gemini API returned an error: \(details)")
+            } catch {
+                handleError("Unexpected Error", message: error.localizedDescription)
+            }
+        }
+    }
+
     func saveMeal(category: MealCategory) async {
         guard let image = currentImage,
               case .result(let result) = appState,

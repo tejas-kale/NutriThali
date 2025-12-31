@@ -9,6 +9,9 @@ struct ResultView: View {
     @State private var isDiabeticSectionExpanded = false
     @State private var showCategoryPicker = false
     @State private var isSaving = false
+    @State private var isEditingDescription = false
+    @State private var editedDescription: String = ""
+    @State private var isRecalculating = false
 
     struct MacroData: Identifiable {
         let name: String
@@ -44,29 +47,80 @@ struct ResultView: View {
             VStack(spacing: 0) {
                 // Header Section
                 VStack(spacing: 16) {
-                    Text(result.dishName)
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .foregroundStyle(.primary)
-                        .multilineTextAlignment(.center)
-                        .accessibilityAddTraits(.isHeader)
+                    // Editable Description Section
+                    VStack(spacing: 12) {
+                        if isEditingDescription {
+                            TextField("Describe the food", text: $editedDescription, axis: .vertical)
+                                .textFieldStyle(.roundedBorder)
+                                .lineLimit(3...6)
+                                .padding(.horizontal, 16)
 
-                    HStack(spacing: 8) {
-                        Text(result.verdictEmoji)
-                            .font(.title2)
-                            .accessibilityHidden(true)
+                            HStack(spacing: 12) {
+                                Button("Cancel") {
+                                    isEditingDescription = false
+                                    editedDescription = result.dishName
+                                }
+                                .buttonStyle(.bordered)
 
-                        Text(isHealthy ? "Healthy Choice" : "Eat in Moderation")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(isHealthy ? Color.green.opacity(0.15) : Color.orange.opacity(0.15))
-                            .foregroundStyle(isHealthy ? .green : .orange)
-                            .clipShape(Capsule())
+                                Button("Recalculate") {
+                                    isEditingDescription = false
+                                    Task {
+                                        isRecalculating = true
+                                        await viewModel.recalculateFromDescription(editedDescription)
+                                        isRecalculating = false
+                                    }
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .disabled(editedDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            }
+                            .padding(.horizontal, 16)
+                        } else {
+                            HStack {
+                                Text(result.dishName)
+                                    .font(.largeTitle)
+                                    .fontWeight(.bold)
+                                    .foregroundStyle(.primary)
+                                    .multilineTextAlignment(.center)
+                                    .accessibilityAddTraits(.isHeader)
+
+                                Button {
+                                    editedDescription = result.dishName
+                                    isEditingDescription = true
+                                } label: {
+                                    Image(systemName: "pencil.circle.fill")
+                                        .font(.title3)
+                                        .foregroundStyle(.blue)
+                                }
+                                .accessibilityLabel("Edit description")
+                                .accessibilityHint("Edit the food description to recalculate nutrition")
+                            }
+                        }
                     }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel(isHealthy ? "Healthy choice" : "Eat in moderation")
+
+                    if isRecalculating {
+                        ProgressView()
+                            .controlSize(.regular)
+                        Text("Recalculating...")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        HStack(spacing: 8) {
+                            Text(result.verdictEmoji)
+                                .font(.title2)
+                                .accessibilityHidden(true)
+
+                            Text(isHealthy ? "Healthy Choice" : "Eat in Moderation")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(isHealthy ? Color.green.opacity(0.15) : Color.orange.opacity(0.15))
+                                .foregroundStyle(isHealthy ? .green : .orange)
+                                .clipShape(Capsule())
+                        }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel(isHealthy ? "Healthy choice" : "Eat in moderation")
+                    }
                 }
                 .padding(.vertical, 24)
                 .padding(.horizontal, 16)
@@ -118,7 +172,11 @@ struct ResultView: View {
                     Spacer()
                 }
                 .padding(16)
+                #if os(iOS)
                 .background(Color(uiColor: .secondarySystemBackground))
+                #elseif os(macOS)
+                .background(Color(nsColor: .controlBackgroundColor))
+                #endif
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
                 .accessibilityElement(children: .combine)
