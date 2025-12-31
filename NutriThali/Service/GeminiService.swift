@@ -58,20 +58,32 @@ class GeminiService {
         }
         
         let promptText = """
-        Analyze this food image. The dish is likely Indian (e.g., a 'Thali' with Roti, Dal, Rice) but could also be an international item. Identify the dish name accurately. If it is a Thali or combo, list the distinct components. Estimate the total calories and macros (protein, carbs, fats in grams). IMPORTANT: Account for hidden calories typical in preparation, such as added Ghee, Oil, Butter, Cream, Sugar.
+        Analyze this food image in TWO STEPS:
 
-        Additionally, provide a specific analysis for a diabetic patient (Type 2). Assess the Glycemic Index and carb load.
+        STEP 1 - PORTION ESTIMATION:
+        Examine the image carefully and estimate the ACTUAL portion size visible in the photo. Be specific (e.g., "250g", "1.5 cups", "2 medium rotis + 150g dal + 200g rice"). Consider plate size, food density, and visible quantity.
 
-        Return the data as JSON with the following structure:
+        STEP 2 - NUTRITIONAL ANALYSIS:
+        Based on the portion size you estimated in STEP 1, calculate:
+        - Total calories for THIS SPECIFIC PORTION
+        - Macronutrients (protein, carbs, fats in grams) for THIS SPECIFIC PORTION
+        - Account for hidden calories (Ghee, Oil, Butter, Cream, Sugar)
+
+        The dish is likely Indian (e.g., 'Thali' with Roti, Dal, Rice) but could also be international. For combo meals, list distinct components.
+
+        Provide diabetic assessment (Type 2) considering Glycemic Index and carb load.
+
+        Return JSON:
         {
+          "estimatedPortionSize": "Your STEP 1 estimate",
           "dishName": "Name of dish",
           "calories": 0,
           "macros": { "protein": 0, "carbs": 0, "fats": 0 },
           "verdictEmoji": "✅" or "⚠️",
-          "briefExplanation": "One short sentence explaining the general health verdict.",
+          "briefExplanation": "One sentence explaining the verdict.",
           "diabeticFriendliness": "High", "Moderate", or "Low",
           "diabeticAdvice": "Specific advice for diabetics",
-          "portionSizeSuggestion": "Recommended portion size"
+          "portionSizeSuggestion": "Recommended portion size for health"
         }
         """
         

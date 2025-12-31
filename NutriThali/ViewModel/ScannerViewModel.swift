@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import Combine
+import CoreData
 
 #if canImport(UIKit)
 import UIKit
@@ -35,11 +36,19 @@ class ScannerViewModel: ObservableObject {
     @Published var appState: AppState = .idle
     @Published var isLoading: Bool = false
     @Published var analysisProgress: String = ""
+    @Published var currentImage: PlatformImage?
 
     private let service = GeminiService()
     private var currentTask: Task<Void, Never>?
+    private var persistenceService: PersistenceService?
+
+    func setPersistenceContext(_ context: NSManagedObjectContext) {
+        self.persistenceService = PersistenceService(context: context)
+    }
 
     func analyzeImage(image: PlatformImage) {
+        // Store the image for later saving
+        currentImage = image
         // Cancel any ongoing analysis
         currentTask?.cancel()
 
@@ -86,8 +95,40 @@ class ScannerViewModel: ObservableObject {
         }
     }
 
+    func saveMeal(category: MealCategory) async {
+        guard let image = currentImage,
+              case .result(let result) = appState,
+              let persistenceService = persistenceService else {
+            return
+        }
+
+        do {
+            try await persistenceService.saveMeal(image: image, result: result, category: category)
+
+            // Success haptic feedback
+            #if os(iOS)
+            let generator = UINotificationFeedbackGenerator()
+            generator.notificationOccurred(.success)
+            #endif
+
+            // Reset to idle after saving
+            await MainActor.run {
+                self.reset()
+            }
+        } catch {
+            // Error haptic feedback
+            #if os(iOS)
+            let generator = UINotificationFeedbackGenerator()
+            generator.notificationOccurred(.error)
+            #endif
+
+            handleError("Save Failed", message: "Could not save meal: \(error.localizedDescription)")
+        }
+    }
+
     func reset() {
         currentTask?.cancel()
+        currentImage = nil
         appState = .idle
         isLoading = false
         analysisProgress = ""

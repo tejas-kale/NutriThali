@@ -4,6 +4,11 @@ import Charts
 struct ResultView: View {
     let result: FoodAnalysisResult
     let onReset: () -> Void
+    let viewModel: ScannerViewModel
+
+    @State private var isDiabeticSectionExpanded = false
+    @State private var showCategoryPicker = false
+    @State private var isSaving = false
 
     struct MacroData: Identifiable {
         let name: String
@@ -90,6 +95,35 @@ struct ResultView: View {
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Total calories: \(Int(result.calories)) kilocalories")
 
+                // Estimated Portion Size
+                HStack(spacing: 12) {
+                    Image(systemName: "scalemass")
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Estimated Portion")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.secondary)
+                            .textCase(.uppercase)
+
+                        Text(result.estimatedPortionSize)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.primary)
+                    }
+
+                    Spacer()
+                }
+                .padding(16)
+                .background(Color(uiColor: .secondarySystemBackground))
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Estimated portion: \(result.estimatedPortionSize)")
+
                 // Nutrition Facts Section
                 GroupBox {
                     VStack(alignment: .leading, spacing: 16) {
@@ -132,19 +166,59 @@ struct ResultView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 20)
 
-                // Diabetes Care Section
+                // Diabetes Care Section (Expandable)
                 GroupBox {
-                    VStack(alignment: .leading, spacing: 16) {
-                        Label("Diabetes Care", systemImage: "waveform.path.ecg")
-                            .font(.headline)
-                            .foregroundStyle(.primary)
-                            .accessibilityAddTraits(.isHeader)
+                    DisclosureGroup(
+                        isExpanded: $isDiabeticSectionExpanded,
+                        content: {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Divider()
+                                    .padding(.top, 4)
 
-                        VStack(alignment: .leading, spacing: 12) {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Advice")
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(.secondary)
+                                        .textCase(.uppercase)
+
+                                    Text(result.diabeticAdvice)
+                                        .font(.subheadline)
+                                        .foregroundStyle(.primary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+
+                                Divider()
+
+                                HStack(alignment: .top, spacing: 8) {
+                                    Image(systemName: "scalemass.fill")
+                                        .font(.title3)
+                                        .foregroundStyle(.green)
+                                        .accessibilityHidden(true)
+
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Recommended Portion")
+                                            .font(.caption)
+                                            .fontWeight(.semibold)
+                                            .foregroundStyle(.secondary)
+                                            .textCase(.uppercase)
+
+                                        Text(result.portionSizeSuggestion)
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                            .foregroundStyle(.primary)
+                                    }
+                                }
+                                .accessibilityElement(children: .combine)
+                                .accessibilityLabel("Recommended portion: \(result.portionSizeSuggestion)")
+                            }
+                            .padding(.top, 8)
+                        },
+                        label: {
                             HStack {
-                                Text("Diabetic Friendliness")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
+                                Label("Diabetes Care", systemImage: "waveform.path.ecg")
+                                    .font(.headline)
+                                    .foregroundStyle(.primary)
 
                                 Spacer()
 
@@ -157,73 +231,69 @@ struct ResultView: View {
                                     .foregroundStyle(diabeticColor)
                                     .clipShape(Capsule())
                             }
-                            .accessibilityElement(children: .combine)
-                            .accessibilityLabel("Diabetic friendliness: \(result.diabeticFriendliness)")
-
-                            Divider()
-
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Advice")
-                                    .font(.caption)
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(.secondary)
-                                    .textCase(.uppercase)
-
-                                Text(result.diabeticAdvice)
-                                    .font(.subheadline)
-                                    .foregroundStyle(.primary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-
-                            Divider()
-
-                            HStack(alignment: .top, spacing: 8) {
-                                Image(systemName: "scalemass.fill")
-                                    .font(.title3)
-                                    .foregroundStyle(.green)
-                                    .accessibilityHidden(true)
-
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Recommended Portion")
-                                        .font(.caption)
-                                        .fontWeight(.semibold)
-                                        .foregroundStyle(.secondary)
-                                        .textCase(.uppercase)
-
-                                    Text(result.portionSizeSuggestion)
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-                                        .foregroundStyle(.primary)
-                                }
-                            }
-                            .accessibilityElement(children: .combine)
-                            .accessibilityLabel("Recommended portion: \(result.portionSizeSuggestion)")
                         }
-                    }
+                    )
+                    .accessibilityLabel("Diabetes care section, \(isDiabeticSectionExpanded ? "expanded" : "collapsed"). Diabetic friendliness: \(result.diabeticFriendliness)")
+                    .accessibilityHint("Double tap to \(isDiabeticSectionExpanded ? "collapse" : "expand") diabetic advice")
                     .padding(4)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
 
-                // Action Button
-                Button {
-                    #if os(iOS)
-                    let generator = UIImpactFeedbackGenerator(style: .medium)
-                    generator.impactOccurred()
-                    #endif
-                    onReset()
-                } label: {
-                    Label("Analyze Another Meal", systemImage: "camera.fill")
-                        .font(.headline)
+                // Action Buttons
+                VStack(spacing: 12) {
+                    // Save to Journal Button
+                    Button {
+                        #if os(iOS)
+                        let generator = UIImpactFeedbackGenerator(style: .medium)
+                        generator.impactOccurred()
+                        #endif
+                        showCategoryPicker = true
+                    } label: {
+                        HStack {
+                            Image(systemName: isSaving ? "hourglass" : "square.and.arrow.down.fill")
+                                .font(.headline)
+                            Text(isSaving ? "Saving..." : "Save to Journal")
+                                .font(.headline)
+                        }
                         .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.green)
+                    .controlSize(.large)
+                    .disabled(isSaving)
+                    .accessibilityLabel(isSaving ? "Saving meal" : "Save meal to journal")
+                    .accessibilityHint("Opens category selection to save this meal to your history")
+
+                    // Analyze Another Button
+                    Button {
+                        #if os(iOS)
+                        let generator = UIImpactFeedbackGenerator(style: .medium)
+                        generator.impactOccurred()
+                        #endif
+                        onReset()
+                    } label: {
+                        Label("Analyze Another Meal", systemImage: "camera.fill")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                    .accessibilityLabel("Analyze another meal")
+                    .accessibilityHint("Returns to home screen to capture or select a new food image")
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
                 .padding(.horizontal, 16)
                 .padding(.top, 24)
                 .padding(.bottom, 32)
-                .accessibilityLabel("Analyze another meal")
-                .accessibilityHint("Returns to home screen to capture or select a new food image")
+            }
+        }
+        .sheet(isPresented: $showCategoryPicker) {
+            CategoryPickerSheet { category in
+                Task {
+                    isSaving = true
+                    await viewModel.saveMeal(category: category)
+                    isSaving = false
+                }
             }
         }
     }

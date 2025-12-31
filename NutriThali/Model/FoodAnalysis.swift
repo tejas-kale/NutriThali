@@ -7,6 +7,7 @@ struct MacroNutrients: Codable, Equatable {
 }
 
 struct FoodAnalysisResult: Codable, Equatable {
+    let estimatedPortionSize: String
     let dishName: String
     let calories: Double
     let macros: MacroNutrients

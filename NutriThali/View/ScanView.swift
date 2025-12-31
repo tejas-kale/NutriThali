@@ -1,11 +1,10 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-struct ContentView: View {
+struct ScanView: View {
     @StateObject private var viewModel = ScannerViewModel()
+    @Environment(\.managedObjectContext) private var viewContext
     @AppStorage("gemini_api_key") private var apiKey: String = ""
-    @AppStorage("has_seen_onboarding") private var hasSeenOnboarding: Bool = false
-    @State private var showSettings = false
     @State private var showCamera = false
     @State private var showImagePicker = false
     @State private var selectedImage: PlatformImage?
@@ -21,26 +20,15 @@ struct ContentView: View {
                 case .analyzing:
                     analyzingView
                 case .result(let result):
-                    ResultView(result: result, onReset: viewModel.reset)
+                    ResultView(result: result, onReset: viewModel.reset, viewModel: viewModel)
                 case .error(let msg):
                     errorView(msg: msg)
                 }
             }
             .navigationTitle("NutriThali")
             .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        showSettings = true
-                    } label: {
-                        Label("Settings", systemImage: "gear")
-                    }
-                    .accessibilityLabel("Settings")
-                    .accessibilityHint("Open app settings and configure API key")
-                }
-            }
-            .sheet(isPresented: $showSettings) {
-                SettingsView()
+            .onAppear {
+                viewModel.setPersistenceContext(viewContext)
             }
             .onChange(of: selectedImage) { oldValue, newValue in
                 if let image = newValue {
@@ -136,22 +124,10 @@ struct ContentView: View {
                             Spacer()
                         }
 
-                        Text("To get started, add your Google Gemini API key in Settings. This enables AI-powered food analysis with detailed nutritional information and diabetic-friendly guidance.")
+                        Text("To get started, add your Google Gemini API key in Settings tab. This enables AI-powered food analysis with detailed nutritional information and diabetic-friendly guidance.")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.leading)
-
-                        Button {
-                            showSettings = true
-                        } label: {
-                            Text("Open Settings")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(.blue)
-                        .controlSize(.regular)
-                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .padding(16)
                     .background(.blue.opacity(0.1))
