@@ -13,7 +13,6 @@ struct ScanView: View {
     @State private var showPermissionAlert = false
     @State private var todaysMeals: [MealEntry] = []
     @State private var selectedMeal: MealEntry?
-    @State private var showMealDetail = false
 
     private var persistenceService: PersistenceService {
         PersistenceService(context: viewContext)
@@ -97,18 +96,16 @@ struct ScanView: View {
             } message: {
                 Text("NutriThali needs access to your camera to analyze food images. Please enable camera access in Settings.")
             }
-            .sheet(isPresented: $showMealDetail) {
-                if let meal = selectedMeal {
-                    MealDetailView(
-                        meal: meal,
-                        onDelete: {
-                            deleteMeal(meal)
-                        },
-                        onUpdateCategory: { newCategory in
-                            updateMealCategory(meal, newCategory: newCategory)
-                        }
-                    )
-                }
+            .sheet(item: $selectedMeal) { meal in
+                MealDetailView(
+                    meal: meal,
+                    onDelete: {
+                        deleteMeal(meal)
+                    },
+                    onUpdateCategory: { newCategory in
+                        updateMealCategory(meal, newCategory: newCategory)
+                    }
+                )
             }
         }
     }
@@ -230,14 +227,11 @@ struct ScanView: View {
                             .padding(.horizontal, 16)
 
                         ForEach(todaysMeals, id: \.id) { meal in
-                            Button {
-                                selectedMeal = meal
-                                showMealDetail = true
-                            } label: {
-                                TodayMealRow(meal: meal)
-                            }
-                            .buttonStyle(.plain)
-                            .padding(.horizontal, 16)
+                            MealCardView(meal: meal)
+                                .padding(.horizontal, 16)
+                                .onTapGesture {
+                                    selectedMeal = meal
+                                }
                         }
                     }
                     .padding(.top, 8)
@@ -338,7 +332,6 @@ struct ScanView: View {
         do {
             try persistenceService.deleteMeal(meal)
             fetchTodaysMeals()
-            showMealDetail = false
             selectedMeal = nil
         } catch {
             print("Failed to delete meal: \(error)")
@@ -352,74 +345,6 @@ struct ScanView: View {
         } catch {
             print("Failed to update meal category: \(error)")
         }
-    }
-}
-
-// MARK: - Helper Views
-
-struct TodayMealRow: View {
-    let meal: MealEntry
-
-    var timeString: String {
-        guard let timestamp = meal.timestamp else { return "" }
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter.string(from: timestamp)
-    }
-
-    var body: some View {
-        HStack(spacing: 12) {
-            // Thumbnail
-            if let imageData = meal.imageData {
-                #if os(iOS)
-                if let uiImage = UIImage(data: imageData) {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 60, height: 60)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                }
-                #elseif os(macOS)
-                if let nsImage = NSImage(data: imageData) {
-                    Image(nsImage: nsImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 60, height: 60)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                }
-                #endif
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(meal.dishName ?? "Unknown")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.primary)
-
-                Text(timeString)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 2) {
-                Text("\(Int(meal.calories))")
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-
-                Text("kcal")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(12)
-        #if os(iOS)
-        .background(Color(uiColor: .secondarySystemBackground))
-        #elseif os(macOS)
-        .background(Color(nsColor: .controlBackgroundColor))
-        #endif
-        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 
