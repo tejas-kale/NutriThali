@@ -2,7 +2,6 @@ import SwiftUI
 
 struct SettingsView: View {
     @AppStorage("gemini_api_key") private var apiKey: String = ""
-    @Environment(\.dismiss) var dismiss
     @State private var showValidation = false
     @State private var isKeyValid = false
     @FocusState private var isKeyFieldFocused: Bool
@@ -120,29 +119,6 @@ struct SettingsView: View {
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        validateKey()
-                        #if os(iOS)
-                        let generator = UIImpactFeedbackGenerator(style: .light)
-                        generator.impactOccurred()
-                        #endif
-                        dismiss()
-                    }
-                    .fontWeight(.semibold)
-                    .accessibilityLabel("Done")
-                    .accessibilityHint("Saves settings and returns to previous screen")
-                }
-
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                    .accessibilityLabel("Cancel")
-                    .accessibilityHint("Discards changes and returns to previous screen")
-                }
-            }
             .onChange(of: apiKey) { oldValue, newValue in
                 showValidation = false
             }
