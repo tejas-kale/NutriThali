@@ -12,6 +12,12 @@ struct ScanView: View {
     @State private var showFileImporter = false
     @State private var showPermissionAlert = false
     @State private var todaysMeals: [MealEntry] = []
+    @State private var selectedMeal: MealEntry?
+    @State private var showMealDetail = false
+
+    private var persistenceService: PersistenceService {
+        PersistenceService(context: viewContext)
+    }
 
     var currentDateString: String {
         let formatter = DateFormatter()
@@ -90,6 +96,19 @@ struct ScanView: View {
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("NutriThali needs access to your camera to analyze food images. Please enable camera access in Settings.")
+            }
+            .sheet(isPresented: $showMealDetail) {
+                if let meal = selectedMeal {
+                    MealDetailView(
+                        meal: meal,
+                        onDelete: {
+                            deleteMeal(meal)
+                        },
+                        onUpdateCategory: { newCategory in
+                            updateMealCategory(meal, newCategory: newCategory)
+                        }
+                    )
+                }
             }
         }
     }
@@ -211,8 +230,14 @@ struct ScanView: View {
                             .padding(.horizontal, 16)
 
                         ForEach(todaysMeals, id: \.id) { meal in
-                            TodayMealRow(meal: meal)
-                                .padding(.horizontal, 16)
+                            Button {
+                                selectedMeal = meal
+                                showMealDetail = true
+                            } label: {
+                                TodayMealRow(meal: meal)
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.horizontal, 16)
                         }
                     }
                     .padding(.top, 8)
@@ -306,6 +331,26 @@ struct ScanView: View {
         } catch {
             print("Failed to fetch today's meals: \(error)")
             todaysMeals = []
+        }
+    }
+
+    private func deleteMeal(_ meal: MealEntry) {
+        do {
+            try persistenceService.deleteMeal(meal)
+            fetchTodaysMeals()
+            showMealDetail = false
+            selectedMeal = nil
+        } catch {
+            print("Failed to delete meal: \(error)")
+        }
+    }
+
+    private func updateMealCategory(_ meal: MealEntry, newCategory: MealCategory) {
+        do {
+            try persistenceService.updateMealCategory(meal, newCategory: newCategory)
+            fetchTodaysMeals()
+        } catch {
+            print("Failed to update meal category: \(error)")
         }
     }
 }

@@ -8,10 +8,10 @@ struct MainTabView: View {
         TabView {
             ScanView()
                 .tabItem {
-                    Label("Scan", systemImage: "camera.fill")
+                    Label("Today", systemImage: "calendar.badge.clock")
                 }
-                .accessibilityLabel("Scan tab")
-                .accessibilityHint("Capture or select food images for analysis")
+                .accessibilityLabel("Today tab")
+                .accessibilityHint("View today's meals and capture new food images")
 
             HistoryView()
                 .tabItem {
