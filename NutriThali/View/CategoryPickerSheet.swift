@@ -14,7 +14,7 @@ struct CategoryPickerSheet: View {
                     HStack(spacing: 16) {
                         Image(systemName: category.icon)
                             .font(.title2)
-                            .foregroundStyle(category.color)
+                            .foregroundStyle(category.colour)
                             .frame(width: 44)
                             .accessibilityHidden(true)
 

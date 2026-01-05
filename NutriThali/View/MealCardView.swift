@@ -3,12 +3,12 @@ import SwiftUI
 struct MealCardView: View {
     let meal: MealEntry
 
-    var categoryColor: Color {
+    var categoryColour: Color {
         guard let categoryString = meal.category,
               let category = MealCategory(rawValue: categoryString) else {
             return .gray
         }
-        return category.color
+        return category.colour
     }
 
     var categoryIcon: String {
@@ -72,8 +72,8 @@ struct MealCardView: View {
                     .fontWeight(.semibold)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(categoryColor.opacity(0.15))
-                    .foregroundStyle(categoryColor)
+                    .background(categoryColour.opacity(0.15))
+                    .foregroundStyle(categoryColour)
                     .clipShape(Capsule())
                 }
 

@@ -19,9 +19,9 @@ struct DailySummaryView: View {
                             .padding(.top, 8)
 
                         HStack(spacing: 24) {
-                            MacroSummary(name: "Protein", value: totalProtein, color: .green)
-                            MacroSummary(name: "Carbs", value: totalCarbs, color: .blue)
-                            MacroSummary(name: "Fats", value: totalFats, color: .orange)
+                            MacroSummary(name: "Protein", value: totalProtein, colour: .green)
+                            MacroSummary(name: "Carbs", value: totalCarbs, colour: .blue)
+                            MacroSummary(name: "Fats", value: totalFats, colour: .orange)
                         }
                     }
                     .padding(.bottom, 12)
@@ -67,12 +67,12 @@ struct DailySummaryView: View {
 struct MacroSummary: View {
     let name: String
     let value: Double
-    let color: Color
+    let colour: Color
 
     var body: some View {
         VStack(spacing: 8) {
             Circle()
-                .fill(color.gradient)
+                .fill(colour.gradient)
                 .frame(width: 12, height: 12)
                 .accessibilityHidden(true)
 

@@ -52,7 +52,7 @@ struct CalendarView: View {
                 Button(action: onPreviousMonth) {
                     Image(systemName: "chevron.left")
                         .font(.title3)
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(Theme.primary)
                         .frame(width: 44, height: 44)
                 }
                 .accessibilityLabel("Previous month")
@@ -60,8 +60,8 @@ struct CalendarView: View {
                 Spacer()
 
                 Text(monthYearString)
-                    .font(.headline)
-                    .fontWeight(.semibold)
+                    .font(Theme.Typography.roundedFont(.headline, weight: .semibold))
+                    .foregroundStyle(.white)
                     .accessibilityAddTraits(.isHeader)
 
                 Spacer()
@@ -69,7 +69,7 @@ struct CalendarView: View {
                 Button(action: onNextMonth) {
                     Image(systemName: "chevron.right")
                         .font(.title3)
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(Theme.primary)
                         .frame(width: 44, height: 44)
                 }
                 .accessibilityLabel("Next month")
@@ -80,9 +80,8 @@ struct CalendarView: View {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 8) {
                 ForEach(daysOfWeek, id: \.self) { day in
                     Text(day)
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.secondary)
+                        .font(Theme.Typography.roundedFont(.caption, weight: .semibold))
+                        .foregroundStyle(.gray)
                         .frame(maxWidth: .infinity)
                         .accessibilityHidden(true)
                 }
@@ -107,9 +106,7 @@ struct CalendarView: View {
                 }
             }
         }
-        .padding()
-        .background(Color(uiColor: .secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        // Removed internal padding and background to let parent handle it
     }
 }
 
@@ -134,13 +131,12 @@ struct DateCell: View {
     var body: some View {
         VStack(spacing: 4) {
             Text(dayNumber)
-                .font(.subheadline)
-                .fontWeight(isToday ? .bold : .regular)
-                .foregroundStyle(isInMonth ? .primary : .tertiary)
+                .font(Theme.Typography.roundedFont(.subheadline, weight: isToday ? .bold : .regular))
+                .foregroundStyle(isInMonth ? (isSelected ? .black : .white) : .gray.opacity(0.5))
 
             if hasMeals && isInMonth {
                 Circle()
-                    .fill(Color.green)
+                    .fill(isSelected ? .black : Theme.primary)
                     .frame(width: 4, height: 4)
             } else {
                 Circle()
@@ -152,13 +148,12 @@ struct DateCell: View {
         .frame(height: 44)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(isSelected ? Color.accentColor : Color.clear)
+                .fill(isSelected ? Theme.primary : Color.clear)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .stroke(isToday ? Color.accentColor : Color.clear, lineWidth: 2)
+                .stroke(isToday && !isSelected ? Theme.primary : Color.clear, lineWidth: 1)
         )
-        .foregroundStyle(isSelected ? .white : .primary)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(dayNumber), \(hasMeals ? "has meals" : "no meals")")
         .accessibilityAddTraits(isSelected ? .isSelected : [])

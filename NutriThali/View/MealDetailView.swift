@@ -13,13 +13,13 @@ struct MealDetailView: View {
 
     var macroData: [ResultView.MacroData] {
         [
-            ResultView.MacroData(name: "Protein", value: meal.proteinGrams, color: .green),
-            ResultView.MacroData(name: "Carbs", value: meal.carbsGrams, color: .blue),
-            ResultView.MacroData(name: "Fats", value: meal.fatsGrams, color: .orange)
+            ResultView.MacroData(name: "Protein", value: meal.proteinGrams, colour: .green),
+            ResultView.MacroData(name: "Carbs", value: meal.carbsGrams, colour: .blue),
+            ResultView.MacroData(name: "Fats", value: meal.fatsGrams, colour: .orange)
         ]
     }
 
-    var diabeticColor: Color {
+    var diabeticColour: Color {
         switch meal.diabeticFriendliness {
         case "High": return .green
         case "Moderate": return .orange
@@ -40,12 +40,12 @@ struct MealDetailView: View {
         return formatter.string(from: timestamp)
     }
 
-    var categoryColor: Color {
+    var categoryColour: Color {
         guard let categoryString = meal.category,
               let category = MealCategory(rawValue: categoryString) else {
             return .gray
         }
-        return category.color
+        return category.colour
     }
 
     var body: some View {
@@ -128,8 +128,8 @@ struct MealDetailView: View {
                                 }
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
-                                .background(categoryColor.opacity(0.15))
-                                .foregroundStyle(categoryColor)
+                                .background(categoryColour.opacity(0.15))
+                                .foregroundStyle(categoryColour)
                                 .clipShape(Capsule())
                             }
                             .accessibilityLabel("Category: \(meal.category ?? "Unknown")")
@@ -206,7 +206,7 @@ struct MealDetailView: View {
                                         innerRadius: .ratio(0.6),
                                         angularInset: 2.0
                                     )
-                                    .foregroundStyle(item.color.gradient)
+                                    .foregroundStyle(item.colour.gradient)
                                 }
                                 .frame(width: 120, height: 120)
                                 .accessibilityHidden(true)
@@ -288,8 +288,8 @@ struct MealDetailView: View {
                                         .fontWeight(.semibold)
                                         .padding(.horizontal, 10)
                                         .padding(.vertical, 4)
-                                        .background(diabeticColor.opacity(0.15))
-                                        .foregroundStyle(diabeticColor)
+                                        .background(diabeticColour.opacity(0.15))
+                                        .foregroundStyle(diabeticColour)
                                         .clipShape(Capsule())
                                 }
                             }

@@ -19,7 +19,7 @@ enum MealCategory: String, CaseIterable, Codable {
         }
     }
 
-    var color: Color {
+    var colour: Color {
         switch self {
         case .breakfast:
             return .orange

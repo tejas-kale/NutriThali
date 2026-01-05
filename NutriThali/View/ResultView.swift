@@ -9,27 +9,29 @@ struct ResultView: View {
     @State private var isDiabeticSectionExpanded = false
     @State private var showCategoryPicker = false
     @State private var isSaving = false
-    @State private var isEditingDescription = false
-    @State private var editedDescription: String = ""
     @State private var isRecalculating = false
+    @State private var showPortionEditor = false
+    @State private var editedPortions: [FoodItem] = []
+    @State private var showMealEditor = false
+    @State private var editedDescription: String = ""
 
     struct MacroData: Identifiable {
         let name: String
         let value: Double
-        let color: Color
+        let colour: Color
 
         var id: String { name }
     }
 
     var macroData: [MacroData] {
         [
-            MacroData(name: "Protein", value: result.macros.protein, color: .green),
-            MacroData(name: "Carbs", value: result.macros.carbs, color: .blue),
-            MacroData(name: "Fats", value: result.macros.fats, color: .orange)
+            MacroData(name: "Protein", value: result.macros.protein, colour: .green),
+            MacroData(name: "Carbs", value: result.macros.carbs, colour: .blue),
+            MacroData(name: "Fats", value: result.macros.fats, colour: .orange)
         ]
     }
 
-    var diabeticColor: Color {
+    var diabeticColour: Color {
         switch result.diabeticFriendliness {
         case "High": return .green
         case "Moderate": return .orange
@@ -43,164 +45,158 @@ struct ResultView: View {
     }
     
     var body: some View {
-        ScrollView {
+        ZStack {
+            Theme.background.ignoresSafeArea()
+            
             VStack(spacing: 0) {
-                // Header Section
-                VStack(spacing: 16) {
-                    // Editable Description Section
-                    VStack(spacing: 12) {
-                        if isEditingDescription {
-                            TextField("Describe the food", text: $editedDescription, axis: .vertical)
-                                .textFieldStyle(.roundedBorder)
-                                .lineLimit(3...6)
-                                .padding(.horizontal, 16)
-
-                            HStack(spacing: 12) {
-                                Button("Cancel") {
-                                    isEditingDescription = false
-                                    editedDescription = result.dishName
-                                }
-                                .buttonStyle(.bordered)
-
-                                Button("Recalculate") {
-                                    isEditingDescription = false
-                                    Task {
-                                        isRecalculating = true
-                                        await viewModel.recalculateFromDescription(editedDescription)
-                                        isRecalculating = false
-                                    }
-                                }
-                                .buttonStyle(.borderedProminent)
-                                .disabled(editedDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                            }
-                            .padding(.horizontal, 16)
-                        } else {
-                            HStack {
-                                Text(result.dishName)
-                                    .font(.largeTitle)
-                                    .fontWeight(.bold)
-                                    .foregroundStyle(.primary)
-                                    .multilineTextAlignment(.center)
-                                    .accessibilityAddTraits(.isHeader)
-
-                                Button {
-                                    editedDescription = result.dishName
-                                    isEditingDescription = true
-                                } label: {
-                                    Image(systemName: "pencil.circle.fill")
-                                        .font(.title3)
-                                        .foregroundStyle(.blue)
-                                }
-                                .accessibilityLabel("Edit description")
-                                .accessibilityHint("Edit the food description to recalculate nutrition")
-                            }
-                        }
+                // Custom Header
+                HStack {
+                    Button(action: onReset) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(10)
+                            .background(Color.white.opacity(0.15))
+                            .clipShape(Circle())
                     }
-
-                    if isRecalculating {
-                        ProgressView()
-                            .controlSize(.regular)
-                        Text("Recalculating...")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        HStack(spacing: 8) {
-                            Text(result.verdictEmoji)
-                                .font(.title2)
-                                .accessibilityHidden(true)
-
-                            Text(isHealthy ? "Healthy Choice" : "Eat in Moderation")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(isHealthy ? Color.green.opacity(0.15) : Color.orange.opacity(0.15))
-                                .foregroundStyle(isHealthy ? .green : .orange)
-                                .clipShape(Capsule())
-                        }
-                        .accessibilityElement(children: .combine)
-                        .accessibilityLabel(isHealthy ? "Healthy choice" : "Eat in moderation")
-                    }
-                }
-                .padding(.vertical, 24)
-                .padding(.horizontal, 16)
-
-                // Calories Card
-                VStack(spacing: 12) {
-                    Label("Total Calories", systemImage: "flame.fill")
-                        .font(.headline)
-                        .foregroundStyle(.secondary)
-                        .accessibilityAddTraits(.isHeader)
-
-                    HStack(alignment: .firstTextBaseline, spacing: 4) {
-                        Text("\(Int(result.calories))")
-                            .font(.system(size: 56, weight: .bold, design: .rounded))
-                            .foregroundStyle(.primary)
-
-                        Text("kcal")
-                            .font(.title3)
-                            .fontWeight(.medium)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 24)
-                .background(Color.accentColor.opacity(0.1))
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Total calories: \(Int(result.calories)) kilocalories")
-
-                // Estimated Portion Size
-                HStack(spacing: 12) {
-                    Image(systemName: "scalemass")
-                        .font(.title3)
-                        .foregroundStyle(.secondary)
-                        .accessibilityHidden(true)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Estimated Portion")
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.secondary)
-                            .textCase(.uppercase)
-
-                        Text(result.estimatedPortionSize)
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.primary)
-                    }
-
+                    .accessibilityLabel("Discard")
+                    
                     Spacer()
+                    
+                    Spacer()
+                    
+                    Button {
+                        showCategoryPicker = true
+                    } label: {
+                        if isSaving {
+                            ProgressView().tint(Theme.primary)
+                        } else {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundStyle(.white)
+                                .padding(10)
+                                .background(Theme.primary)
+                                .clipShape(Circle())
+                        }
+                    }
+                    .disabled(isSaving)
+                    .accessibilityLabel("Save")
                 }
-                .padding(16)
-                #if os(iOS)
-                .background(Color(uiColor: .secondarySystemBackground))
-                #elseif os(macOS)
-                .background(Color(nsColor: .controlBackgroundColor))
-                #endif
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Estimated portion: \(result.estimatedPortionSize)")
+                .padding(.horizontal)
+                .padding(.top, 50)
+                .padding(.bottom, 10)
+                .background(Theme.background)
+                
+                ScrollView {
+                    VStack(spacing: 0) {
+                        // Header Section
+                        VStack(spacing: 16) {
+                            Text(result.dishName)
+                                .font(Theme.Typography.roundedFont(.largeTitle, weight: .bold))
+                                .foregroundStyle(.white)
+                                .multilineTextAlignment(.center)
+                                .accessibilityAddTraits(.isHeader)
+                                .padding(.top, 8)
+                        }
 
-                // Nutrition Facts Section
-                GroupBox {
+                        if isRecalculating {
+                            ProgressView()
+                                .controlSize(.regular)
+                                .tint(Theme.primary)
+                            Text("Recalculating...")
+                                .font(Theme.Typography.roundedFont(.subheadline))
+                                .foregroundStyle(.gray)
+                                .padding(.top, 8)
+                        } else {
+                            HStack(spacing: 8) {
+                                Text(result.verdictEmoji)
+                                    .font(.title2)
+                                    .accessibilityHidden(true)
+
+                                Text(isHealthy ? "Healthy Choice" : "Eat in Moderation")
+                                    .font(Theme.Typography.roundedFont(.subheadline, weight: .semibold))
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(isHealthy ? Color.green.opacity(0.15) : Color.orange.opacity(0.15))
+                                    .foregroundStyle(isHealthy ? .green : .orange)
+                                    .clipShape(Capsule())
+                            }
+                            .accessibilityElement(children: .combine)
+                            .accessibilityLabel(isHealthy ? "Healthy choice" : "Eat in moderation")
+                        }
+                    }
+                    .padding(.vertical, 24)
+                    .padding(.horizontal, 16)
+
+                    // Calories Card
+                    VStack(spacing: 12) {
+                        Label("Total Calories", systemImage: "flame.fill")
+                            .font(Theme.Typography.roundedFont(.headline))
+                            .foregroundStyle(.gray)
+                            .accessibilityAddTraits(.isHeader)
+
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            Text("\(Int(result.calories))")
+                                .font(Theme.Typography.roundedFont(size: 64, weight: .bold))
+                                .foregroundStyle(Theme.primary)
+
+                            Text("kcal")
+                                .font(Theme.Typography.roundedFont(.title3, weight: .medium))
+                                .foregroundStyle(.gray)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 32)
+                    .background(Theme.cardBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.Shapes.cardCornerRadius))
+                    .padding(.horizontal, 16)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Total calories: \(Int(result.calories)) kilocalories")
+
+                    // Estimated Portion Size
+                    HStack(spacing: 12) {
+                        Image(systemName: "scalemass")
+                            .font(.title3)
+                            .foregroundStyle(Theme.primary)
+                            .accessibilityHidden(true)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Estimated Portion")
+                                .font(Theme.Typography.roundedFont(.caption, weight: .semibold))
+                                .foregroundStyle(.gray)
+                                .textCase(.uppercase)
+
+                            Text(result.estimatedPortionSize)
+                                .font(Theme.Typography.roundedFont(.subheadline, weight: .semibold))
+                                .foregroundStyle(.white)
+                        }
+
+                        Spacer()
+                    }
+                    .padding(16)
+                    .background(Theme.cardBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.Shapes.cardCornerRadius))
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+
+                    // Nutrition Facts Section
                     VStack(alignment: .leading, spacing: 16) {
                         Label("Nutrition Facts", systemImage: "chart.pie.fill")
-                            .font(.headline)
-                            .foregroundStyle(.primary)
+                            .font(Theme.Typography.roundedFont(.headline))
+                            .foregroundStyle(.white)
                             .accessibilityAddTraits(.isHeader)
 
                         // Macros Chart
-                        HStack(spacing: 20) {
+                        HStack(spacing: 24) {
                             Chart(macroData) { item in
                                 SectorMark(
                                     angle: .value("Value", item.value),
-                                    innerRadius: .ratio(0.6),
+                                    innerRadius: .ratio(0.65),
                                     angularInset: 2.0
                                 )
-                                .foregroundStyle(item.color.gradient)
+                                .foregroundStyle(item.colour.gradient)
                             }
-                            .frame(width: 120, height: 120)
+                            .frame(width: 130, height: 130)
                             .accessibilityHidden(true)
 
                             VStack(alignment: .leading, spacing: 12) {
@@ -209,142 +205,95 @@ struct ResultView: View {
                                 }
                             }
                         }
-                        .accessibilityElement(children: .contain)
+                        .padding(.vertical, 8)
 
-                        Divider()
+                        Divider().background(Color.gray.opacity(0.3))
 
-                        // Summary
                         Text(result.briefExplanation)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .font(Theme.Typography.roundedFont(.subheadline))
+                            .foregroundStyle(.gray)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    .padding(4)
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 20)
+                    .padding(20)
+                    .background(Theme.cardBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.Shapes.cardCornerRadius))
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
 
-                // Diabetes Care Section (Expandable)
-                GroupBox {
-                    DisclosureGroup(
-                        isExpanded: $isDiabeticSectionExpanded,
-                        content: {
-                            VStack(alignment: .leading, spacing: 12) {
-                                Divider()
-                                    .padding(.top, 4)
-
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("Advice")
-                                        .font(.caption)
-                                        .fontWeight(.semibold)
-                                        .foregroundStyle(.secondary)
-                                        .textCase(.uppercase)
-
-                                    Text(result.diabeticAdvice)
-                                        .font(.subheadline)
-                                        .foregroundStyle(.primary)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
-
-                                Divider()
-
-                                HStack(alignment: .top, spacing: 8) {
-                                    Image(systemName: "scalemass.fill")
-                                        .font(.title3)
-                                        .foregroundStyle(.green)
-                                        .accessibilityHidden(true)
-
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("Recommended Portion")
-                                            .font(.caption)
-                                            .fontWeight(.semibold)
-                                            .foregroundStyle(.secondary)
-                                            .textCase(.uppercase)
-
-                                        Text(result.portionSizeSuggestion)
-                                            .font(.subheadline)
-                                            .fontWeight(.medium)
-                                            .foregroundStyle(.primary)
-                                    }
-                                }
-                                .accessibilityElement(children: .combine)
-                                .accessibilityLabel("Recommended portion: \(result.portionSizeSuggestion)")
-                            }
-                            .padding(.top, 8)
-                        },
-                        label: {
+                    // Diabetes Care Section
+                    VStack(alignment: .leading, spacing: 0) {
+                        Button {
+                            withAnimation { isDiabeticSectionExpanded.toggle() }
+                        } label: {
                             HStack {
                                 Label("Diabetes Care", systemImage: "waveform.path.ecg")
-                                    .font(.headline)
-                                    .foregroundStyle(.primary)
+                                    .font(Theme.Typography.roundedFont(.headline))
+                                    .foregroundStyle(.white)
 
                                 Spacer()
 
                                 Text(result.diabeticFriendliness)
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
+                                    .font(Theme.Typography.roundedFont(.caption, weight: .bold))
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 4)
-                                    .background(diabeticColor.opacity(0.15))
-                                    .foregroundStyle(diabeticColor)
+                                    .background(diabeticColour.opacity(0.2))
+                                    .foregroundStyle(diabeticColour)
                                     .clipShape(Capsule())
+                                
+                                Image(systemName: "chevron.right")
+                                    .rotationEffect(.degrees(isDiabeticSectionExpanded ? 90 : 0))
+                                    .foregroundStyle(.gray)
                             }
+                            .padding(20)
                         }
-                    )
-                    .accessibilityLabel("Diabetes care section, \(isDiabeticSectionExpanded ? "expanded" : "collapsed"). Diabetic friendliness: \(result.diabeticFriendliness)")
-                    .accessibilityHint("Double tap to \(isDiabeticSectionExpanded ? "collapse" : "expand") diabetic advice")
-                    .padding(4)
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 16)
 
-                // Action Buttons
-                VStack(spacing: 12) {
-                    // Save to Journal Button
-                    Button {
-                        #if os(iOS)
-                        let generator = UIImpactFeedbackGenerator(style: .medium)
-                        generator.impactOccurred()
-                        #endif
-                        showCategoryPicker = true
-                    } label: {
-                        HStack {
-                            Image(systemName: isSaving ? "hourglass" : "square.and.arrow.down.fill")
-                                .font(.headline)
-                            Text(isSaving ? "Saving..." : "Save to Journal")
-                                .font(.headline)
+                        if isDiabeticSectionExpanded {
+                            VStack(alignment: .leading, spacing: 16) {
+                                Divider().background(Color.gray.opacity(0.3))
+                                
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Advice")
+                                        .font(Theme.Typography.roundedFont(.caption, weight: .semibold))
+                                        .foregroundStyle(.gray)
+                                        .textCase(.uppercase)
+
+                                    Text(result.diabeticAdvice)
+                                        .font(Theme.Typography.roundedFont(.subheadline))
+                                        .foregroundStyle(.white)
+                                }
+
+                                HStack(alignment: .top, spacing: 12) {
+                                    Image(systemName: "scalemass.fill")
+                                        .font(.title3)
+                                        .foregroundStyle(Theme.primary)
+
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Recommended Portion")
+                                            .font(Theme.Typography.roundedFont(.caption, weight: .semibold))
+                                            .foregroundStyle(.gray)
+                                            .textCase(.uppercase)
+
+                                        Text(result.portionSizeSuggestion)
+                                            .font(Theme.Typography.roundedFont(.subheadline, weight: .medium))
+                                            .foregroundStyle(.white)
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 20)
+                            .transition(.opacity)
                         }
-                        .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.green)
-                    .controlSize(.large)
-                    .disabled(isSaving)
-                    .accessibilityLabel(isSaving ? "Saving meal" : "Save meal to journal")
-                    .accessibilityHint("Opens category selection to save this meal to your history")
-
-                    // Analyze Another Button
-                    Button {
-                        #if os(iOS)
-                        let generator = UIImpactFeedbackGenerator(style: .medium)
-                        generator.impactOccurred()
-                        #endif
-                        onReset()
-                    } label: {
-                        Label("Analyze Another Meal", systemImage: "camera.fill")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
-                    .accessibilityLabel("Analyze another meal")
-                    .accessibilityHint("Returns to home screen to capture or select a new food image")
+                    .background(Theme.cardBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.Shapes.cardCornerRadius))
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+                    
+                    Spacer(minLength: 120)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 24)
-                .padding(.bottom, 32)
             }
         }
+
         .sheet(isPresented: $showCategoryPicker) {
             CategoryPickerSheet { category in
                 Task {
@@ -357,32 +306,24 @@ struct ResultView: View {
     }
 }
 
-// MARK: - Helper Views
-
 struct MacroRow: View {
     let macro: ResultView.MacroData
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 12) {
             Circle()
-                .fill(macro.color.gradient)
-                .frame(width: 12, height: 12)
-                .accessibilityHidden(true)
+                .fill(macro.colour.gradient)
+                .frame(width: 10, height: 10)
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 0) {
                 Text(macro.name)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(Theme.Typography.roundedFont(.caption))
+                    .foregroundStyle(.gray)
 
                 Text("\(Int(macro.value))g")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.primary)
+                    .font(Theme.Typography.roundedFont(.subheadline, weight: .bold))
+                    .foregroundStyle(.white)
             }
-
-            Spacer()
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(macro.name): \(Int(macro.value)) grams")
     }
 }
